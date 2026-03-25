@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import AuthGuard from '../components/AuthGuard';
 import PageLayout from '../components/PageLayout';
 

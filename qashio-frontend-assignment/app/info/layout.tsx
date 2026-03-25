@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import PageLayout from '../components/PageLayout';
 
 export default function InfoLayout({ children }: { children: React.ReactNode }) {
