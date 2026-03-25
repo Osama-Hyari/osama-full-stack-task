@@ -1,0 +1,3 @@
+[submodule "qashio-api"]
+	path = qashio-api
+	url = https://github.com/Osama-Hyari/osama-full-stack-task.git
