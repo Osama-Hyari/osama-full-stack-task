@@ -1,6 +1,8 @@
 "use client";
 
 import { Suspense, useDeferredValue, useMemo, useState } from 'react';
+import { Dialog, DialogTitle, DialogContent, DialogActions, TextField } from '@mui/material';
+import { useCallback } from 'react';
 import {
   Alert,
   Box,
@@ -45,6 +47,52 @@ export default function TransactionsPageClient() {
   const deferredSearch = useDeferredValue(filters.searchTerm);
   const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'dashboard' | 'workspace'>('dashboard');
+  const [dummyLoading, setDummyLoading] = useState(false);
+  const [dummySuccess, setDummySuccess] = useState<string | null>(null);
+  const [dummyError, setDummyError] = useState<string | null>(null);
+  const [dummyDialogOpen, setDummyDialogOpen] = useState(false);
+  const [dummyForm, setDummyForm] = useState({
+    count: 50,
+    categoriesCount: 5,
+    minAmount: 10,
+    maxAmount: 500,
+    dateFrom: '',
+    dateTo: '',
+  });
+
+  const handleOpenDummyDialog = () => setDummyDialogOpen(true);
+  const handleCloseDummyDialog = () => setDummyDialogOpen(false);
+  const handleDummyFormChange = (e: any) => {
+    setDummyForm({ ...dummyForm, [e.target.name]: e.target.value });
+  };
+  const handleGenerateDummy = useCallback(async () => {
+    setDummyLoading(true);
+    setDummySuccess(null);
+    setDummyError(null);
+    try {
+      const res = await fetch('/api/transactions/generate-dummy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...dummyForm,
+          count: Number(dummyForm.count),
+          categoriesCount: Number(dummyForm.categoriesCount),
+          minAmount: Number(dummyForm.minAmount),
+          maxAmount: Number(dummyForm.maxAmount),
+          dateFrom: dummyForm.dateFrom || undefined,
+          dateTo: dummyForm.dateTo || undefined,
+        }),
+      });
+      if (!res.ok) throw new Error('Failed to generate dummy data');
+      const data = await res.json();
+      setDummySuccess(`Dummy data created: ${data.created} transactions, ${data.categories} categories`);
+      setDummyDialogOpen(false);
+    } catch (err: any) {
+      setDummyError(err.message || 'Unknown error');
+    } finally {
+      setDummyLoading(false);
+    }
+  }, [dummyForm]);
   const section = searchParams.get('section');
   const activeNav: 'transactions' | 'categories' | 'budgets' =
     section === 'categories' || section === 'budgets' ? section : 'transactions';
@@ -56,22 +104,8 @@ export default function TransactionsPageClient() {
   const featuredBudgets = (budgetsQuery.data || []).slice(0, 4);
   const budgetUsageQueries = useBudgetUsagesQuery(featuredBudgets.map((budget) => budget.id));
 
-  const rows = useMemo(() => {
-    const serverRows = transactionsQuery.data?.data || [];
-    if (!deferredSearch.trim()) {
-      return serverRows;
-    }
-
-    const term = deferredSearch.toLowerCase();
-    return serverRows.filter((transaction) => {
-      const categoryName = transaction.category?.name?.toLowerCase() || '';
-      return (
-        transaction.type.toLowerCase().includes(term) ||
-        categoryName.includes(term) ||
-        String(transaction.amount).includes(term)
-      );
-    });
-  }, [deferredSearch, transactionsQuery.data?.data]);
+  // Always use backend data for server-side pagination
+  const rows = transactionsQuery.data?.data || [];
 
   const budgetInsights = featuredBudgets.map((budget, index) => ({
     budget,
@@ -112,6 +146,35 @@ export default function TransactionsPageClient() {
             <Button component={Link} href="/transactions/new" variant="contained" color="secondary">
               {t('page.addTransaction')}
             </Button>
+            <Button
+              variant="outlined"
+              color="primary"
+              onClick={handleOpenDummyDialog}
+            >
+              Generate Dummy Data
+            </Button>
+            <Dialog open={dummyDialogOpen} onClose={handleCloseDummyDialog} maxWidth="sm" fullWidth>
+              <DialogTitle>Generate Dummy Data</DialogTitle>
+              <DialogContent>
+                <Stack spacing={2} sx={{ mt: 1 }}>
+                  <TextField label="Transactions Count" name="count" type="number" value={dummyForm.count} onChange={handleDummyFormChange} fullWidth />
+                  <TextField label="Categories Count" name="categoriesCount" type="number" value={dummyForm.categoriesCount} onChange={handleDummyFormChange} fullWidth />
+                  <TextField label="Min Amount" name="minAmount" type="number" value={dummyForm.minAmount} onChange={handleDummyFormChange} fullWidth />
+                  <TextField label="Max Amount" name="maxAmount" type="number" value={dummyForm.maxAmount} onChange={handleDummyFormChange} fullWidth />
+                  <TextField label="Date From" name="dateFrom" type="datetime-local" value={dummyForm.dateFrom} onChange={handleDummyFormChange} fullWidth />
+                  <TextField label="Date To" name="dateTo" type="datetime-local" value={dummyForm.dateTo} onChange={handleDummyFormChange} fullWidth />
+                </Stack>
+              </DialogContent>
+              <DialogActions>
+                <Button onClick={handleCloseDummyDialog}>Cancel</Button>
+                <Button onClick={handleGenerateDummy} disabled={dummyLoading} variant="contained" color="secondary">
+                  {dummyLoading ? <CircularProgress size={18} sx={{ mr: 1 }} /> : null}
+                  Generate
+                </Button>
+              </DialogActions>
+            </Dialog>
+            {dummySuccess && <Alert severity="success" sx={{ mt: 2 }}>{dummySuccess}</Alert>}
+            {dummyError && <Alert severity="error" sx={{ mt: 2 }}>{dummyError}</Alert>}
           </Stack>
         </Stack>
 
@@ -149,8 +212,10 @@ export default function TransactionsPageClient() {
                 <Stack spacing={2.5}>
                   <TransactionFiltersPanel categories={categoriesQuery.data || []} />
                   <TransactionsTable
-                    rows={rows}
+                    rows={transactionsQuery.data?.data || []}
                     rowCount={transactionsQuery.data?.total || 0}
+                    page={transactionsQuery.data?.page ? transactionsQuery.data.page - 1 : 0}
+                    pageSize={transactionsQuery.data?.limit || 10}
                     loading={transactionsQuery.isLoading}
                     fetching={transactionsQuery.isFetching}
                     onOpenDetails={setSelectedTransactionId}

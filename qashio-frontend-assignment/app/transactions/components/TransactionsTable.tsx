@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Chip, Paper, Stack, Typography } from '@mui/material';
 import {
   DataGrid,
@@ -16,6 +16,8 @@ import { useLocalization } from '@/lib/localization-context';
 interface TransactionsTableProps {
   rows: Transaction[];
   rowCount: number;
+  page?: number;
+  pageSize?: number;
   loading: boolean;
   fetching: boolean;
   onOpenDetails: (id: string) => void;
@@ -24,15 +26,36 @@ interface TransactionsTableProps {
 export default function TransactionsTable({
   rows,
   rowCount,
+  page,
+  pageSize,
   loading,
   fetching,
   onOpenDetails,
 }: TransactionsTableProps) {
+  console.log('[DEBUG] TransactionsTable pagination:', { rowCount, page, pageSize });
   const { t } = useLocalization();
   const [isMounted, setIsMounted] = useState(false);
   const filters = useTransactionStore((state) => state.filters);
   const setPagination = useTransactionStore((state) => state.setPagination);
   const setSorting = useTransactionStore((state) => state.setSorting);
+  const prevFiltersRef = useRef(filters);
+
+  useEffect(() => {
+    // If any filter except pagination changes, reset to first page
+    const prev = prevFiltersRef.current;
+    if (
+      prev.type !== filters.type ||
+      prev.categoryId !== filters.categoryId ||
+      prev.dateRange.startDate !== filters.dateRange.startDate ||
+      prev.dateRange.endDate !== filters.dateRange.endDate ||
+      prev.amountRange.min !== filters.amountRange.min ||
+      prev.amountRange.max !== filters.amountRange.max ||
+      prev.searchTerm !== filters.searchTerm
+    ) {
+      setPagination(0, filters.pagination.pageSize);
+    }
+    prevFiltersRef.current = filters;
+  }, [filters, setPagination]);
 
   useEffect(() => {
     setIsMounted(true);
@@ -85,8 +108,8 @@ export default function TransactionsTable({
   ];
 
   const paginationModel: GridPaginationModel = {
-    page: filters.pagination.page,
-    pageSize: filters.pagination.pageSize,
+    page: typeof page === 'number' ? page : filters.pagination.page,
+    pageSize: typeof pageSize === 'number' ? pageSize : filters.pagination.pageSize,
   };
   const sortModel: GridSortModel = [
     {
@@ -124,7 +147,10 @@ export default function TransactionsTable({
           pageSizeOptions={[10, 20, 50]}
           paginationModel={paginationModel}
           sortModel={sortModel}
-          onPaginationModelChange={(model) => setPagination(model.page, model.pageSize)}
+          onPaginationModelChange={(model) => {
+            console.log('[DEBUG] setPagination called with:', model.page, model.pageSize);
+            setPagination(model.page, model.pageSize);
+          }}
           onSortModelChange={(model) => {
             if (!model[0]?.field || !model[0]?.sort) {
               setSorting('date', 'desc');

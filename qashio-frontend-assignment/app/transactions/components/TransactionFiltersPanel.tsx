@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import {
   Button,
@@ -7,17 +7,20 @@ import {
   Stack,
   TextField,
   Typography,
-} from '@mui/material';
-import { DatePicker } from '@mui/x-date-pickers';
-import { Category } from '@/app/types';
-import { useTransactionStore } from '@/app/hooks/useTransactionStore';
-import { useLocalization } from '@/lib/localization-context';
+} from "@mui/material";
+import { DatePicker } from "@mui/x-date-pickers";
+import { Category } from "@/app/types";
+import { useTransactionStore } from "@/app/hooks/useTransactionStore";
+import React, { useState, useEffect } from "react";
+import { useLocalization } from "@/lib/localization-context";
 
 interface TransactionFiltersPanelProps {
   categories: Category[];
 }
 
-export default function TransactionFiltersPanel({ categories }: TransactionFiltersPanelProps) {
+export default function TransactionFiltersPanel({
+  categories,
+}: TransactionFiltersPanelProps) {
   const { t } = useLocalization();
   const filters = useTransactionStore((state) => state.filters);
   const setSearchTerm = useTransactionStore((state) => state.setSearchTerm);
@@ -27,49 +30,94 @@ export default function TransactionFiltersPanel({ categories }: TransactionFilte
   const setAmountRange = useTransactionStore((state) => state.setAmountRange);
   const resetFilters = useTransactionStore((state) => state.resetFilters);
 
+  // Local state for staged filter values
+  const [localFilters, setLocalFilters] = useState({
+    searchTerm: filters.searchTerm,
+    type: filters.type,
+    categoryId: filters.categoryId,
+    dateRange: { ...filters.dateRange },
+    amountRange: { ...filters.amountRange },
+  });
+
+  // Sync local state when global filters change (e.g., reset)
+  useEffect(() => {
+    setLocalFilters({
+      searchTerm: filters.searchTerm,
+      type: filters.type,
+      categoryId: filters.categoryId,
+      dateRange: { ...filters.dateRange },
+      amountRange: { ...filters.amountRange },
+    });
+  }, [filters]);
+
+  const handleApplyFilters = () => {
+    setSearchTerm(localFilters.searchTerm);
+    setType(localFilters.type as "all" | "income" | "expense");
+    setCategoryId(localFilters.categoryId);
+    setDateRange(
+      localFilters.dateRange.startDate,
+      localFilters.dateRange.endDate,
+    );
+    setAmountRange("min", localFilters.amountRange.min);
+    setAmountRange("max", localFilters.amountRange.max);
+  };
+
   return (
     <Paper elevation={0} sx={{ p: 3 }}>
-      <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" spacing={2}>
-        <BoxTitle
-          title={t('filters.title')}
-          subtitle={t('filters.subtitle')}
-        />
+      <Stack
+        direction={{ xs: "column", md: "row" }}
+        justifyContent="space-between"
+        spacing={2}
+      >
+        <BoxTitle title={t("filters.title")} subtitle={t("filters.subtitle")} />
         <Button onClick={resetFilters} variant="text" color="inherit">
-          {t('filters.reset')}
+          {t("filters.reset")}
         </Button>
       </Stack>
 
       <Stack
-        direction={{ xs: 'column', lg: 'row' }}
+        direction={{ xs: "column", lg: "row" }}
         spacing={2}
-        sx={{ mt: 3, alignItems: { lg: 'center' } }}
+        sx={{ mt: 3, alignItems: { lg: "center" } }}
       >
         <TextField
-          label={t('filters.quick')}
-          value={filters.searchTerm}
-          onChange={(event) => setSearchTerm(event.target.value)}
-          placeholder={t('filters.placeholder')}
+          label={t("filters.quick")}
+          value={localFilters.searchTerm}
+          onChange={(event) =>
+            setLocalFilters((prev) => ({
+              ...prev,
+              searchTerm: event.target.value,
+            }))
+          }
+          placeholder={t("filters.placeholder")}
           fullWidth
         />
         <TextField
           select
-          label={t('filters.type')}
-          value={filters.type}
-          onChange={(event) => setType(event.target.value as 'all' | 'income' | 'expense')}
+          label={t("filters.type")}
+          value={localFilters.type}
+          onChange={(event) =>
+            setLocalFilters((prev) => ({ ...prev, type: event.target.value }))
+          }
           sx={{ minWidth: 170 }}
         >
-          <MenuItem value="all">{t('filters.allTypes')}</MenuItem>
-          <MenuItem value="income">{t('filters.income')}</MenuItem>
-          <MenuItem value="expense">{t('filters.expense')}</MenuItem>
+          <MenuItem value="all">{t("filters.allTypes")}</MenuItem>
+          <MenuItem value="income">{t("filters.income")}</MenuItem>
+          <MenuItem value="expense">{t("filters.expense")}</MenuItem>
         </TextField>
         <TextField
           select
-          label={t('filters.category')}
-          value={filters.categoryId}
-          onChange={(event) => setCategoryId(event.target.value)}
+          label={t("filters.category")}
+          value={localFilters.categoryId}
+          onChange={(event) =>
+            setLocalFilters((prev) => ({
+              ...prev,
+              categoryId: event.target.value,
+            }))
+          }
           sx={{ minWidth: 210 }}
         >
-          <MenuItem value="">{t('filters.allCategories')}</MenuItem>
+          <MenuItem value="">{t("filters.allCategories")}</MenuItem>
           {categories.map((category) => (
             <MenuItem key={category.id} value={category.id}>
               {category.name}
@@ -78,33 +126,64 @@ export default function TransactionFiltersPanel({ categories }: TransactionFilte
         </TextField>
       </Stack>
 
-      <Stack direction={{ xs: 'column', lg: 'row' }} spacing={2} sx={{ mt: 2 }}>
+      <Stack direction={{ xs: "column", lg: "row" }} spacing={2} sx={{ mt: 2 }}>
         <DatePicker
-          label={t('filters.from')}
-          value={filters.dateRange.startDate}
-          onChange={(date) => setDateRange(date, filters.dateRange.endDate)}
+          label={t("filters.from")}
+          value={localFilters.dateRange.startDate}
+          onChange={(date) =>
+            setLocalFilters((prev) => ({
+              ...prev,
+              dateRange: { ...prev.dateRange, startDate: date },
+            }))
+          }
           slotProps={{ textField: { fullWidth: true } }}
         />
         <DatePicker
-          label={t('filters.to')}
-          value={filters.dateRange.endDate}
-          onChange={(date) => setDateRange(filters.dateRange.startDate, date)}
+          label={t("filters.to")}
+          value={localFilters.dateRange.endDate}
+          onChange={(date) =>
+            setLocalFilters((prev) => ({
+              ...prev,
+              dateRange: { ...prev.dateRange, endDate: date },
+            }))
+          }
           slotProps={{ textField: { fullWidth: true } }}
         />
         <TextField
           type="number"
-          label={t('filters.minAmount')}
-          value={filters.amountRange.min}
-          onChange={(event) => setAmountRange('min', event.target.value)}
+          label={t("filters.minAmount")}
+          value={localFilters.amountRange.min}
+          onChange={(event) =>
+            setLocalFilters((prev) => ({
+              ...prev,
+              amountRange: { ...prev.amountRange, min: event.target.value },
+            }))
+          }
           fullWidth
         />
         <TextField
           type="number"
-          label={t('filters.maxAmount')}
-          value={filters.amountRange.max}
-          onChange={(event) => setAmountRange('max', event.target.value)}
+          label={t("filters.maxAmount")}
+          value={localFilters.amountRange.max}
+          onChange={(event) =>
+            setLocalFilters((prev) => ({
+              ...prev,
+              amountRange: { ...prev.amountRange, max: event.target.value },
+            }))
+          }
           fullWidth
         />
+      </Stack>
+      <Stack direction="row" justifyContent="flex-end" sx={{ mt: 3 }}>
+        <Button
+          variant="contained"
+          color="secondary"
+          size="large"
+          onClick={handleApplyFilters}
+          sx={{ minWidth: 160, fontWeight: 700 }}
+        >
+          {t("filters.apply") || "Apply Filters"}
+        </Button>
       </Stack>
     </Paper>
   );
