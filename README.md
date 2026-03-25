@@ -1,138 +1,96 @@
-# 💸 Simple Expense Tracker
+# 🚀 Production Deployment & Credentials
 
-Track your income, expenses, and budgets with a clean, event-driven architecture using **NestJS** and **Next.js**.
+To deploy this project to a production server:
 
----
+1. Clone or copy the repository to your server.
+2. Set environment variables (see .env.example or below).
+3. Build and start all services:
+	```bash
+	docker compose build
+	docker compose up -d
+	```
+4. Make sure required ports are open (80/443 for web, 3000/4000 for app, etc).
+5. (Optional) Set up a reverse proxy (Nginx, Caddy, etc) for HTTPS and domain routing.
 
-## 🧰 Tech Stack
+**Default Backend Credentials:**
 
-### 🛠 Backend
-- **Framework**: NestJS with TypeScript
-- **ORM**: TypeORM (preferred) or Prisma
-- **Database**: PostgreSQL (preferred) or SQL
-- **Event Streaming**: Kafka (preferred)
+- Email: `user@example.com`
+- Password: `password123`
 
-### 💻 Frontend
-- **Framework**: Next.js (App Router)
-- **Language**: TypeScript + React 18+
-- **UI Library**: MUI v7 (DataGrid, Dialogs, Forms)
-- **State/Data**: React Query
+You can change these in the backend Dockerfile or with environment variables.
 
----
+# Expense Tracker Frontend
 
-## 📦 Backend Requirements
+Frontend implementation for the expense tracker assignment using Next.js App Router, TypeScript, MUI, and React Query. This client is designed to sit in front of the finished NestJS backend and present the API through a cleaner, more professional operational workspace.
 
-### 🔁 Transactions
-CRUD operations for tracking individual entries:
+## Implemented Features
 
-- Properties:
-  - `amount` 💰
-  - `category` 🏷️
-  - `date` 📅
-  - `type` (`income` | `expense`)
+### Transactions Workspace
+- `/transactions` dashboard with a polished summary hero
+- Server-driven pagination with 10 rows by default
+- Server-driven sorting for `date`, `amount`, and `createdAt`
+- Filtering by transaction type, category, date range, and amount range
+- Quick filter on the visible page for fast operator scanning
+- Row click opens a detail drawer with the full transaction record
+- Loading indicators, empty states, and API error alerts
 
-### 🏷️ Categories
-- Users can create and list categories
-- Each transaction must belong to a category
+### Create Transaction
+- `/transactions/new` route for creating income or expense transactions
+- Category dropdown populated from the backend
+- MUI date picker and typed payload formatting
+- Frontend validation before submission
+- React Query mutation with automatic dashboard refresh
 
-### 💰 Budgets Module
-- Set a budget (e.g., $500) per category over a time period (e.g., monthly)
-- View current spending vs. budget
+### Budget + Reporting Enhancements
+- Summary cards powered by `GET /transactions/summary/report`
+- Budget watchlist powered by `GET /budgets` and `GET /budgets/:id/usage`
+- Visual budget health indicators with progress bars and over-budget states
 
-#### 🧩 Event-Driven Pattern
-- Emit an event when a transaction is created or updated
-- Listen for the event to (Optional) :
-  - Log activity
-  - Check budget usage
-  - Perform related actions
+### Architecture Choices
+- Next.js route handlers under `/api/*` proxy requests to the backend service
+- Shared typed API client for browser components
+- Zustand store for transaction table filters and view state
+- Central formatting and form-validation helpers to keep components lean
 
----
+## Environment
 
-## ✅ Technical Expectations
-
-- Modular, maintainable structure
-- Validate input using **DTOs**
-- Centralized and custom error handling
-- Auto-generate docs with **Swagger/OpenAPI**
-- Use NestJS decorators (built-in and custom)
-- JWT-based authentication (optional)
-
----
-
-## 📡 API Endpoints (Minimum)
-
-### Transactions
-- `POST /transactions`
-- `GET /transactions`
-- `GET /transactions/:id`
-- `PUT /transactions/:id`
-- `DELETE /transactions/:id`
-
-### Categories
-- `POST /categories`
-- `GET /categories`
-
----
-
-## 🖥️ Frontend Requirements
-
-### 🔍 `/transactions` Page
-- Fetch transaction data with React Query (`/api/transactions`)
-- Display paginated table (10 items per page)
-- Support sortable columns and filters
-- Reference design: `Transactions.fig`
-
-### 📄 Transaction Detail View
-- Click a row → open a modal or drawer
-- Display full transaction details
-
-### ➕ Create Transaction (`/transactions/new`)
-- Form for adding a new transaction
-- Includes category dropdown, date picker, and type selector
-
-### 🚦 UX & Resilience
-- Use loading spinners or skeletons
-- Show MUI alerts on error
-- Handle empty states (e.g., "No transactions found")
-
----
-
-## 🚀 Backend Bonus Features
-- JWT-based authentication
-- Custom decorators, Guards, Pipes, filters ..etc.
-- Summary/report endpoint (e.g., total income/expense for a date range)
-- Filtering, sorting & pagination (by category, date, etc.)
-- Unit tests for services/controllers
-
----
-
-## 🚀 Frontend Bonus Features
-- Form validation with Zod/Yup
-- Unit tests for UI components and logic
-- Global or advanced state management
-- UI/UX enhancements beyond base design
-- Filtering, sorting & pagination (by category, date, etc.)
-
-
----
-
-## 📬 Deliverables
-
-- A public **GitHub repository**
-
----
-
-## 🚀 Running the Project
-
-To start the entire application, simply run:
+Create a local environment file from the example and point it to the backend:
 
 ```bash
-docker-compose up --build
+BACKEND_API_URL=http://localhost:3000
 ```
 
-This command will:
-- Build the Docker images for both frontend and backend
-- Start the services defined in `docker-compose.yml`
-- Make the application accessible locally
+The frontend calls local Next.js routes such as `/api/transactions`, and those routes proxy to the NestJS backend URL above.
 
-Happy tracking! 💸
+For Docker Compose, the frontend container must target the backend service name on the Docker network:
+
+```bash
+BACKEND_API_URL=http://qashio-api:3000
+```
+
+## Run Locally
+
+```bash
+npm install
+npm run dev
+```
+
+If your backend also runs on port `3000`, start the frontend on a different port:
+
+```bash
+npm run dev -- --port 3001
+```
+
+## Test Commands
+
+```bash
+npm run test
+npm run build
+```
+
+## Notes
+
+- This frontend assumes the backend already exposes the assignment endpoints for transactions, categories, budgets, and summary reporting.
+- The API client includes small normalization helpers so the UI remains stable if the backend wraps pagination metadata inside a `pagination` object.
+- The visual design intentionally goes beyond the base assignment with a stronger dashboard presentation, responsive layout, and budget monitoring section.
+- In Docker, `localhost` inside the frontend container refers to the frontend container itself, not the NestJS API. Use the Compose service name `qashio-api` for backend proxying.
