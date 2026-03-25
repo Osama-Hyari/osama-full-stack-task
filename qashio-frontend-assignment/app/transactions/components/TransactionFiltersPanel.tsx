@@ -97,7 +97,10 @@ export default function TransactionFiltersPanel({
           label={t("filters.type")}
           value={localFilters.type}
           onChange={(event) =>
-            setLocalFilters((prev) => ({ ...prev, type: event.target.value }))
+            setLocalFilters((prev) => ({
+              ...prev,
+              type: event.target.value as "all" | "income" | "expense",
+            }))
           }
           sx={{ minWidth: 170 }}
         >
