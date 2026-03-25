@@ -1,3 +1,24 @@
+# 🚀 Production Deployment & Credentials
+
+To deploy this project to a production server:
+
+1. Clone or copy the repository to your server.
+2. Set environment variables (see .env.example or below).
+3. Build and start all services:
+	```bash
+	docker compose build
+	docker compose up -d
+	```
+4. Make sure required ports are open (80/443 for web, 3000/4000 for app, etc).
+5. (Optional) Set up a reverse proxy (Nginx, Caddy, etc) for HTTPS and domain routing.
+
+**Default Backend Credentials:**
+
+- Email: `user@example.com`
+- Password: `password123`
+
+You can change these in the backend Dockerfile or with environment variables.
+
 # Expense Tracker Frontend
 
 Frontend implementation for the expense tracker assignment using Next.js App Router, TypeScript, MUI, and React Query. This client is designed to sit in front of the finished NestJS backend and present the API through a cleaner, more professional operational workspace.
