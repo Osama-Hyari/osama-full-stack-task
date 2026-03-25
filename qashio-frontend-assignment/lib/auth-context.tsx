@@ -1,22 +1,9 @@
-'use client';
+"use client";
 
-import {
-  createContext,
-  ReactNode,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useState, ReactNode } from "react";
+import { usePathname } from "next/navigation";
 
-const AUTH_STORAGE_KEY = 'expense-tracker-auth';
-const AUTH_TOKEN_KEY = 'expense-tracker-token';
-const LOGIN_ENDPOINT = '/api/login';
-
-interface StoredAuthSession {
-  email: string;
-  token: string;
-}
+const LOGIN_ENDPOINT = "/api/login";
 
 interface AuthContextValue {
   email: string | null;
@@ -26,85 +13,85 @@ interface AuthContextValue {
   logout: () => void;
 }
 
-const AuthContext = createContext<AuthContextValue>({
-  email: null,
-  isAuthenticated: false,
-  isReady: false,
-  login: async () => Promise.reject({ success: false, error: 'Not implemented' }),
-  logout: () => {},
-});
-
-function readStoredSession(): StoredAuthSession | null {
-  if (typeof window === 'undefined') {
-    return null;
-  }
-
-  const rawValue = window.localStorage.getItem(AUTH_STORAGE_KEY);
-  if (!rawValue) {
-    return null;
-  }
-
-  try {
-    const parsed = JSON.parse(rawValue) as StoredAuthSession;
-    return parsed?.email ? parsed : null;
-  } catch {
-    window.localStorage.removeItem(AUTH_STORAGE_KEY);
-    return null;
-  }
-}
+const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [email, setEmail] = useState<string | null>(null);
   const [isReady, setIsReady] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
-    const session = readStoredSession();
-    setEmail(session?.email ?? null);
-    setIsReady(true);
-  }, []);
-
-  const value = useMemo<AuthContextValue>(
-    () => ({
-      email,
-      isAuthenticated: Boolean(email),
-      isReady,
-      login: async (nextEmail: string, password: string) => {
-        const trimmedEmail = nextEmail.trim();
-        if (!trimmedEmail || !password.trim()) {
-          return { success: false, error: 'Missing email or password.' };
+    async function checkSession() {
+      console.log('[AuthProvider] checkSession triggered, pathname:', pathname);
+      try {
+        const res = await fetch("/api/session", { cache: "no-store" });
+        const data = await res.json();
+        console.log("[AuthProvider] /api/session response", data);
+        if (data.authenticated && data.email) {
+          setEmail(data.email);
+          console.log('[AuthProvider] setEmail:', data.email);
+        } else {
+          setEmail(null);
+          console.log('[AuthProvider] setEmail: null (not authenticated)');
         }
-
-        try {
-          const response = await fetch(LOGIN_ENDPOINT, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: trimmedEmail, password }),
-          });
-          const result = await response.json();
-          if (result.success && result.email && result.token) {
-            const session = { email: result.email, token: result.token };
-            window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
-            window.localStorage.setItem(AUTH_TOKEN_KEY, result.token);
-            setEmail(result.email);
-            return { success: true };
-          }
-          return { success: false, error: result.error || 'Invalid credentials.' };
-        } catch {
-          return { success: false, error: 'Login failed. Please try again.' };
-        }
-      },
-      logout: () => {
-        window.localStorage.removeItem(AUTH_STORAGE_KEY);
-        window.localStorage.removeItem(AUTH_TOKEN_KEY);
+      } catch (err) {
+        console.error("[AuthProvider] /api/session error", err);
         setEmail(null);
-      },
-    }),
-    [email, isReady],
-  );
+      } finally {
+        setIsReady(true);
+        console.log('[AuthProvider] setIsReady: true');
+      }
+    }
+    checkSession();
+  }, [pathname]);
+
+  const value = useMemo<AuthContextValue>(() => ({
+    email,
+    isAuthenticated: Boolean(email),
+    isReady,
+    login: async (nextEmail: string, password: string) => {
+      const trimmedEmail = nextEmail.trim();
+      if (!trimmedEmail || !password.trim()) {
+        console.log('[AuthProvider] login: missing email or password');
+        return { success: false, error: "Missing email or password." };
+      }
+      try {
+        const response = await fetch(LOGIN_ENDPOINT, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: trimmedEmail, password }),
+        });
+        const result = await response.json();
+        console.log('[AuthProvider] login response:', result);
+        if (result.success && result.email && result.token) {
+          const lang = navigator.language || "en";
+          document.cookie = `expense-tracker-lang=${lang}; path=/; SameSite=Lax`;
+          await fetch("/api/session", { cache: "no-store" });
+          console.log('[AuthProvider] login success, reloading page');
+          window.location.reload();
+          return { success: true };
+        }
+        console.log('[AuthProvider] login failed:', result.error);
+        return {
+          success: false,
+          error: result.error || "Invalid credentials.",
+        };
+      } catch (err) {
+        console.error('[AuthProvider] login error:', err);
+        return { success: false, error: "Login failed. Please try again." };
+      }
+    },
+    logout: () => {
+      setEmail(null);
+      console.log('[AuthProvider] logout: setEmail(null)');
+    },
+  }), [email, isReady]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
-  return useContext(AuthContext);
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+  return ctx;
 }

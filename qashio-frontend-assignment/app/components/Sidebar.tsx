@@ -24,10 +24,12 @@ type NavItem = {
 };
 
 const navItems: NavItem[] = [
-  { href: "/info", label: "Dashbord" },
   { href: "/transactions", label: "Transactions" },
   { href: "/categories", label: "Categories" },
   { href: "/budgets", label: "Budgets" },
+  { href: "/info", label: "Analytics" },
+  { href: "/reports", label: "Reports" },
+  { href: "/project-tasks", label: "Project Tasks" },
 ];
 
 export default function Sidebar() {

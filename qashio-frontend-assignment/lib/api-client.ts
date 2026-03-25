@@ -9,19 +9,20 @@ import {
   Transaction,
   TransactionPayload,
   TransactionQueryParams,
-} from '@/app/types';
+} from "@/app/types";
+import { getToken } from "./token-utils";
 
 function toQueryString(params: Record<string, string | number | undefined>) {
   const searchParams = new URLSearchParams();
 
   Object.entries(params).forEach(([key, value]) => {
-    if (typeof value !== 'undefined' && value !== '') {
+    if (typeof value !== "undefined" && value !== "") {
       searchParams.set(key, String(value));
     }
   });
 
   const query = searchParams.toString();
-  return query ? `?${query}` : '';
+  return query ? `?${query}` : "";
 }
 
 function normalizePaginatedTransactions(
@@ -32,6 +33,7 @@ function normalizePaginatedTransactions(
   const data = Array.isArray(payload?.data) ? payload.data : [];
   const total = payload?.total ?? payload?.pagination?.total ?? data.length;
   const page = payload?.page ?? payload?.pagination?.page ?? fallbackPage;
+  const authToken = getToken();
   const limit = payload?.limit ?? payload?.pagination?.limit ?? fallbackLimit;
   const totalPages =
     payload?.totalPages ??
@@ -60,7 +62,7 @@ function normalizeCollection<T>(payload: any): T[] {
 }
 
 function resolveRequestInput(input: string): string {
-  if (typeof window === 'undefined') {
+  if (typeof window === "undefined") {
     return input;
   }
 
@@ -68,7 +70,7 @@ function resolveRequestInput(input: string): string {
   const resolved = new URL(input, currentOrigin);
 
   // Keep frontend API calls same-origin even if an absolute localhost URL leaks in.
-  if (resolved.pathname.startsWith('/api/')) {
+  if (resolved.pathname.startsWith("/api/")) {
     return `${resolved.pathname}${resolved.search}${resolved.hash}`;
   }
 
@@ -81,29 +83,38 @@ function resolveRequestInput(input: string): string {
  * - If not, on client, use token from localStorage if available.
  * - On 401, optionally handle redirect in caller.
  */
-async function request<T>(input: string, init?: RequestInit, token?: string): Promise<T> {
-  let authToken = token;
-  if (!authToken && typeof window !== 'undefined') {
-    authToken = window.localStorage.getItem('expense-tracker-token') || undefined;
-  }
+async function request<T>(
+  input: string,
+  init?: RequestInit,
+  token?: string,
+): Promise<T> {
+  let authToken = token || getToken();
+  const resolvedUrl = resolveRequestInput(input);
+  console.log('[api-client] Request:', {
+    url: resolvedUrl,
+    method: init?.method || 'GET',
+    hasToken: !!authToken,
+    tokenPreview: authToken ? authToken.slice(0, 30) + '...' : null,
+    headers: init?.headers,
+    body: init?.body,
+  });
 
-  const response = await fetch(resolveRequestInput(input), {
+  const response = await fetch(resolvedUrl, {
     ...init,
-    credentials: 'same-origin',
+    credentials: "same-origin",
     headers: {
-      Accept: 'application/json',
-      'Content-Type': 'application/json',
+      Accept: "application/json",
+      "Content-Type": "application/json",
       ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
       ...init?.headers,
     },
   });
 
-  // If 401 and running on client, clear auth and redirect to login
-  if (response.status === 401 && typeof window !== 'undefined') {
-    window.localStorage.removeItem('expense-tracker-auth');
-    window.localStorage.removeItem('expense-tracker-token');
-    window.location.href = '/login';
-    // Return a never-resolving promise to halt further code
+  if (response.status === 401 && typeof window !== "undefined") {
+    console.warn('[api-client] 401 Unauthorized, redirecting to /login');
+    window.localStorage.removeItem("expense-tracker-auth");
+    window.localStorage.removeItem("expense-tracker-token");
+    window.location.href = "/login";
     return new Promise(() => {}) as Promise<T>;
   }
 
@@ -111,12 +122,13 @@ async function request<T>(input: string, init?: RequestInit, token?: string): Pr
 
   if (!response.ok) {
     const message = Array.isArray(payload?.message)
-      ? payload.message.join(', ')
-      : payload?.message || payload?.error || 'Request failed';
-
+      ? payload.message.join(", ")
+      : payload?.message || payload?.error || "Request failed";
+    console.error('[api-client] Request failed:', message, { url: resolvedUrl, status: response.status });
     throw new Error(message);
   }
 
+  console.log('[api-client] Response:', { url: resolvedUrl, status: response.status, payload });
   return payload as T;
 }
 
@@ -128,7 +140,7 @@ export const expenseTrackerApi = {
         limit: params.limit,
         sortBy: params.sortBy,
         sortOrder: params.sortOrder,
-        type: params.type && params.type !== 'all' ? params.type : undefined,
+        type: params.type && params.type !== "all" ? params.type : undefined,
         categoryId: params.categoryId || undefined,
         dateFrom: params.dateFrom,
         dateTo: params.dateTo,
@@ -139,25 +151,29 @@ export const expenseTrackerApi = {
 
     return normalizePaginatedTransactions(payload, params.page, params.limit);
   },
-  getTransaction: (id: string) => request<Transaction>(`/api/transactions/${id}`),
+  getTransaction: (id: string) =>
+    request<Transaction>(`/api/transactions/${id}`),
   createTransaction: (payload: TransactionPayload) =>
-    request<Transaction>('/api/transactions', {
-      method: 'POST',
+    request<Transaction>("/api/transactions", {
+      method: "POST",
       body: JSON.stringify(payload),
     }),
-  getCategories: async () => normalizeCollection<Category>(await request<any>('/api/categories')),
+  getCategories: async () =>
+    normalizeCollection<Category>(await request<any>("/api/categories")),
   createCategory: (payload: CategoryPayload) =>
-    request<Category>('/api/categories', {
-      method: 'POST',
+    request<Category>("/api/categories", {
+      method: "POST",
       body: JSON.stringify(payload),
     }),
-  getBudgets: async () => normalizeCollection<Budget>(await request<any>('/api/budgets')),
+  getBudgets: async () =>
+    normalizeCollection<Budget>(await request<any>("/api/budgets")),
   createBudget: (payload: BudgetPayload) =>
-    request<Budget>('/api/budgets', {
-      method: 'POST',
+    request<Budget>("/api/budgets", {
+      method: "POST",
       body: JSON.stringify(payload),
     }),
-  getBudgetUsage: (id: string) => request<BudgetUsage>(`/api/budgets/${id}/usage`),
+  getBudgetUsage: (id: string) =>
+    request<BudgetUsage>(`/api/budgets/${id}/usage`),
   getSummary: async (dateFrom?: string, dateTo?: string) => {
     const payload = await request<any>(
       `/api/transactions/summary/report${toQueryString({ dateFrom, dateTo })}`,
@@ -170,4 +186,3 @@ export const expenseTrackerApi = {
     };
   },
 };
-
