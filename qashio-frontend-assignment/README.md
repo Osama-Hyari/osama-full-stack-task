@@ -88,6 +88,15 @@ npm run test
 npm run build
 ```
 
+
+## API Documentation
+
+The backend API documentation (Swagger UI) is available at:
+
+- http://72.62.48.101:3000/docs
+
+Use this to explore, test, and understand all available API endpoints.
+
 ## Notes
 
 - This frontend assumes the backend already exposes the assignment endpoints for transactions, categories, budgets, and summary reporting.

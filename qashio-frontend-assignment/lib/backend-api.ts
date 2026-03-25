@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const backendBaseUrl = process.env.BACKEND_API_URL || "http://localhost:3000";
+const backendBaseUrl = "http://72.62.48.101:4001/";
 
 function buildBackendUrl(pathname: string, searchParams?: URLSearchParams) {
   const trimmedBase = backendBaseUrl.replace(/\/$/, "");
   const trimmedPath = pathname.replace(/^\//, "");
   const url = new URL(`${trimmedBase}/${trimmedPath}`);
-
+  // url.port = "4001";
   if (searchParams) {
     searchParams.forEach((value, key) => {
       if (value !== "") {
