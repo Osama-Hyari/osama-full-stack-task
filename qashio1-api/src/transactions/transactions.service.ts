@@ -82,6 +82,7 @@ export class TransactionsService {
         page: query.page,
         limit: query.limit,
         totalPages: Math.ceil(total / query.limit),
+        hasNextPage: (query.page * query.limit) < total,
       },
     };
   }
@@ -268,4 +269,68 @@ export class TransactionsService {
       res.status(500).end('Error generating report');
     });
   }
+
+  async generateDummyTransactions(options: {
+    count: number;
+    categoriesCount?: number;
+    minAmount?: number;
+    maxAmount?: number;
+    dateFrom?: string;
+    dateTo?: string;
+  }) {
+    const {
+      count,
+      categoriesCount = 5,
+      minAmount = 1,
+      maxAmount = 1000,
+      dateFrom = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+      dateTo = new Date().toISOString(),
+    } = options;
+
+    // Generate random category names
+    const categoryNames = Array.from({ length: categoriesCount }, (_, i) => `Category_${Math.random().toString(36).substring(2, 8)}_${i}`);
+    // Create categories and collect their IDs
+    const categories = await Promise.all(
+      categoryNames.map(async (name) => {
+        try {
+          const cat = await this.categoriesService.create({ name });
+          return cat.id;
+        } catch (e) {
+          // If already exists, fetch it
+          const found = await this.categoriesService.findAll();
+          const match = found.find((c) => c.name === name);
+          return match ? match.id : null;
+        }
+      })
+    );
+    const validCategoryIds = categories.filter(Boolean);
+    if (validCategoryIds.length === 0) {
+      throw new Error('No valid categories available for dummy data');
+    }
+
+    const types = Object.values(TransactionType);
+    const transactions: CreateTransactionDto[] = [];
+    for (let i = 0; i < count; i++) {
+      const amount = Math.random() * (maxAmount - minAmount) + minAmount;
+      const date = new Date(
+        new Date(dateFrom).getTime() +
+          Math.random() * (new Date(dateTo).getTime() - new Date(dateFrom).getTime())
+      );
+      const type = types[Math.floor(Math.random() * types.length)];
+      const categoryId = validCategoryIds[Math.floor(Math.random() * validCategoryIds.length)];
+      transactions.push({
+        amount: Number(amount.toFixed(2)),
+        categoryId,
+        date,
+        type,
+      } as CreateTransactionDto);
+    }
+
+    // Concurrently create transactions
+    const created = await Promise.all(
+      transactions.map((dto) => this.create(dto))
+    );
+    return { created: created.length, categories: validCategoryIds.length };
+  }
 }
+  

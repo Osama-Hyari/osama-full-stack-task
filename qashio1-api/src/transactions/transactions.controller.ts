@@ -35,7 +35,9 @@ export class TransactionsController {
 
   @Post()
   @ApiCreatedResponse({ type: Transaction })
-  create(@Body() createTransactionDto: CreateTransactionDto): Promise<Transaction> {
+  create(
+    @Body() createTransactionDto: CreateTransactionDto,
+  ): Promise<Transaction> {
     return this.transactionsService.create(createTransactionDto);
   }
 
@@ -48,8 +50,21 @@ export class TransactionsController {
       },
     },
   })
-  findAll(@Query() query: QueryTransactionsDto) {
-    return this.transactionsService.findAll(query);
+  async findAll(@Query() query: QueryTransactionsDto) {
+    // Ensure pagination defaults
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 10;
+    const sortBy = query.sortBy ?? 'date';
+    const sortOrder = query.sortOrder ?? 'DESC';
+    const result = await this.transactionsService.findAll({ ...query, page, limit, sortBy, sortOrder });
+    const { total } = result.meta;
+    return {
+      ...result,
+      meta: {
+        ...result.meta,
+        hasNextPage: (page * limit) < total,
+      },
+    };
   }
 
   @Get('summary/report')
@@ -114,5 +129,22 @@ export class TransactionsController {
   @ApiNoContentResponse()
   async remove(@Param('id') id: string): Promise<void> {
     await this.transactionsService.remove(id);
+  }
+
+  @Post('generate-dummy')
+  @ApiCreatedResponse({ description: 'Dummy transactions generated' })
+  async generateDummyTransactions(
+    @Body()
+    body: {
+      count: number;
+      categoryId: string;
+      type: string;
+      minAmount?: number;
+      maxAmount?: number;
+      dateFrom?: string;
+      dateTo?: string;
+    },
+  ) {
+    return this.transactionsService.generateDummyTransactions(body);
   }
 }
