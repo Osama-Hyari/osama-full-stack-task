@@ -30,15 +30,12 @@ function normalizePaginatedTransactions(
   fallbackPage: number,
   fallbackLimit: number,
 ): PaginatedResponse<Transaction> {
+  const meta = payload?.meta || {};
   const data = Array.isArray(payload?.data) ? payload.data : [];
-  const total = payload?.total ?? payload?.pagination?.total ?? data.length;
-  const page = payload?.page ?? payload?.pagination?.page ?? fallbackPage;
-  const authToken = getToken();
-  const limit = payload?.limit ?? payload?.pagination?.limit ?? fallbackLimit;
-  const totalPages =
-    payload?.totalPages ??
-    payload?.pagination?.totalPages ??
-    Math.max(1, Math.ceil(total / Math.max(limit, 1)));
+  const total = meta.total ?? payload?.total ?? data.length;
+  const page = meta.page ?? payload?.page ?? fallbackPage;
+  const limit = meta.limit ?? payload?.limit ?? fallbackLimit;
+  const totalPages = meta.totalPages ?? payload?.totalPages ?? Math.max(1, Math.ceil(total / Math.max(limit, 1)));
 
   return {
     data,
