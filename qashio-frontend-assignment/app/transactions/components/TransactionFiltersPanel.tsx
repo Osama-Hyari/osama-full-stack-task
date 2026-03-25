@@ -185,7 +185,9 @@ export default function TransactionFiltersPanel({
           onClick={handleApplyFilters}
           sx={{ minWidth: 160, fontWeight: 700 }}
         >
-          {t("filters.apply") || "Apply Filters"}
+          {t("filters.apply") && t("filters.apply").trim() !== ""
+            ? t("filters.apply")
+            : "Apply Filters"}{" "}
         </Button>
       </Stack>
     </Paper>

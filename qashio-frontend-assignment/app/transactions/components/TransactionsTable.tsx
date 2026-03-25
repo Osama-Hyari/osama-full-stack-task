@@ -103,7 +103,7 @@ export default function TransactionsTable({
       headerName: t('table.created'),
       minWidth: 140,
       flex: 1,
-      valueFormatter: (value) => (value ? formatDate(String(value)) : 'N/A'),
+      valueFormatter: (value) => (value ? String(value) : 'N/A'),
     },
   ];
 
