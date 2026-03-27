@@ -43,6 +43,7 @@ services:
       DEFAULT_EMAIL: ${DEFAULT_EMAIL:-user@example.com}
       DEFAULT_PASSWORD: ${DEFAULT_PASSWORD:-password123}
       REDIS_HOST: redis
+      KAFKA_BROKER: kafka:9092
     depends_on:
       postgres:
         condition: service_healthy
@@ -57,7 +58,8 @@ services:
     ports:
       - '3001:3000'
     environment:
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4001}
+      NEXT_PUBLIC_API_URL: http://72.62.48.101:4001
+      NEXT_PUBLIC_SOCKET_URL: ws://72.62.48.101:4001
     depends_on:
       - api
 
@@ -92,7 +94,7 @@ services:
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1

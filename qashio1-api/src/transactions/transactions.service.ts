@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { KafkaProducerService } from '../kafka-producer.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Repository } from 'typeorm';
@@ -22,6 +23,7 @@ export class TransactionsService {
     private readonly transactionsRepository: Repository<Transaction>,
     private readonly categoriesService: CategoriesService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly kafkaProducer: KafkaProducerService,
   ) {}
 
   async create(
@@ -32,7 +34,11 @@ export class TransactionsService {
       this.transactionsRepository.create(createTransactionDto);
     const saved = await this.transactionsRepository.save(transaction);
 
+
     this.eventEmitter.emit(TransactionEvents.CREATED, { transaction: saved });
+
+    // Publish to Kafka
+    await this.kafkaProducer.sendMessage('transactions', saved);
 
     return this.findOne(saved.id);
   }
@@ -222,12 +228,16 @@ export class TransactionsService {
 
     this.eventEmitter.emit(TransactionEvents.UPDATED, { transaction: updated });
 
+    // Publish update event to Kafka
+    await this.kafkaProducer.sendMessage('transactions', { ...updated, event: 'updated' });
     return this.findOne(updated.id);
   }
 
   async remove(id: string): Promise<void> {
     const transaction = await this.findOne(id);
     await this.transactionsRepository.remove(transaction);
+    // Publish delete event to Kafka
+    await this.kafkaProducer.sendMessage('transactions', { ...transaction, event: 'deleted' });
   }
 
   private async ensureCategoryExists(categoryId: string): Promise<void> {

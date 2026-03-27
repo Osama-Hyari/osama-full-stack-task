@@ -83,6 +83,32 @@ Optional configuration:
 - `DB_NAME` (default `expense_tracker`, or `:memory:` for tests)
 - `DB_SYNC` (`true` by default; set `false` in production)
 
+## Kafka Integration (Bonus)
+
+This project includes Kafka integration for event-driven microservices:
+
+- **Kafka Producer Service**: Easily send messages to Kafka topics from your NestJS services.
+- **Kafka Consumer Controller**: Handles messages from Kafka topics using NestJS microservice patterns.
+- **Kafka Health Endpoint**: Check Kafka broker connectivity via `/kafka-health` endpoint.
+
+### How to Use
+
+1. Ensure Kafka and Zookeeper are running (see `docker-compose.yml`).
+2. The backend connects to Kafka at `localhost:9092` by default (configurable via `KAFKA_BROKER` env).
+3. To send a message:
+   - Inject `KafkaProducerService` and call `sendMessage('topic', payload)`.
+4. To consume messages:
+   - Add a `@MessagePattern('topic')` handler in any controller.
+5. Check Kafka health:
+   - `GET /kafka-health` returns Kafka connection status.
+
+### Bonus Points
+- Kafka health endpoint for observability.
+- Modular producer/consumer setup for easy extension.
+- Ready for scalable event-driven features.
+
+---
+
 ## Setup
 
 ```bash

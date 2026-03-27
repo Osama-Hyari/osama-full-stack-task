@@ -182,4 +182,13 @@ export const expenseTrackerApi = {
       net: payload?.net ?? 0,
     };
   },
+  updateTransaction: (id: string, payload: TransactionPayload) =>
+    request<Transaction>(`/api/transactions/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }),
+  deleteTransaction: (id: string) =>
+    request<void>(`/api/transactions/${id}`, {
+      method: "DELETE",
+    }),
 };

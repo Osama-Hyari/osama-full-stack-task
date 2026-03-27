@@ -25,6 +25,13 @@ Frontend implementation for the expense tracker assignment using Next.js App Rou
 
 ## Implemented Features
 
+### Kafka Integration
+- Kafka is used for real-time event streaming between backend and frontend.
+- Backend produces events (login, transactions) to Kafka topics.
+- Backend consumes Kafka topics and emits events to the frontend via WebSocket.
+- Docker Compose includes Kafka and Zookeeper services for local and production use.
+- All Kafka broker addresses are environment-configurable for local and Docker environments.
+
 ### Transactions Workspace
 - `/transactions` dashboard with a polished summary hero
 - Server-driven pagination with 10 rows by default

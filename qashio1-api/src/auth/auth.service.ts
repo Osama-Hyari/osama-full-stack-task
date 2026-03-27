@@ -1,9 +1,12 @@
 import { Injectable } from '@nestjs/common';
+import { KafkaProducerService } from '../kafka-producer.service';
 import { LoginDto } from './dto/login.dto';
 import * as jwt from 'jsonwebtoken';
 
 @Injectable()
 export class AuthService {
+  constructor(private readonly kafkaProducer: KafkaProducerService) {}
+
   async login(loginDto: LoginDto) {
     // Use environment variables for default user
     const demoUser = {
@@ -21,6 +24,12 @@ export class AuthService {
         process.env.JWT_SECRET || 'default_secret',
         { expiresIn: '1h' }
       );
+      // Publish login_success event to Kafka
+      await this.kafkaProducer.sendMessage('login_events', {
+        event: 'login_success',
+        email: demoUser.email,
+        timestamp: new Date().toISOString(),
+      });
       return {
         success: true,
         email: demoUser.email,

@@ -5,6 +5,7 @@ import { Box, Typography, List, ListItem, ListItemText, Paper } from '@mui/mater
 const tasks = [
   'Backend and frontend Dockerfiles are ready',
   'docker-compose.yml configures all services (API, frontend, DB, Redis, Kafka, etc.)',
+  'Kafka integration: backend produces and consumes events, frontend receives real-time updates via WebSocket',
   'Frontend and backend communicate via service names in Docker',
   'Frontend report creation uses correct API contract (query params)',
   'Frontend report list and download links work with backend URLs',

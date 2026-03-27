@@ -5,11 +5,12 @@ import { TransactionsService } from './transactions.service';
 import { Transaction } from './transaction.entity';
 import { CategoriesModule } from '../categories/categories.module';
 import { TransactionsReportController } from './transactions.report.controller';
+import { KafkaProducerService } from '../kafka-producer.service';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Transaction]), CategoriesModule],
   controllers: [TransactionsController, TransactionsReportController],
-  providers: [TransactionsService],
+  providers: [TransactionsService, KafkaProducerService],
   exports: [TransactionsService, TypeOrmModule],
 })
 /**

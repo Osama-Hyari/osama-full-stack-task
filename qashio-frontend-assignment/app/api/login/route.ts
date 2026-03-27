@@ -11,6 +11,7 @@ export async function POST(request: NextRequest) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
+    console.log("login at datetime: ", new Date().toISOString());
     console.log("Login proxy response status:", backendRes.status);
     const data = await backendRes.json();
 

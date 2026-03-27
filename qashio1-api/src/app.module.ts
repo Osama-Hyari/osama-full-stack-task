@@ -3,6 +3,9 @@ import { BullModule } from '@nestjs/bull';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { AppController } from './app.controller';
+import { KafkaHealthController } from './kafka-health.controller';
+import { KafkaProducerService } from './kafka-producer.service';
+import { KafkaConsumerController } from './kafka-consumer.controller';
 import { AppService } from './app.service';
 import { NotificationsGateway } from './notifications/notifications.gateway';
 import { CategoriesModule } from './categories/categories.module';
@@ -52,8 +55,8 @@ const useSqlite = isTestEnv || process.env.DB_TYPE === 'sqlite';
     AuthModule,
     ReportsModule,
   ],
-  controllers: [AppController],
-  providers: [AppService, NotificationsGateway],
+  controllers: [AppController, KafkaHealthController, KafkaConsumerController],
+  providers: [AppService, NotificationsGateway, KafkaProducerService],
 })
 /**
  * Root module that wires infrastructure and feature modules.

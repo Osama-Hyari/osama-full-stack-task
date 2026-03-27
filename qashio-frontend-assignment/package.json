@@ -24,6 +24,7 @@
     "node-fetch": "^2.7.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "socket.io-client": "^4.8.3",
     "stylis": "^4.3.6",
     "stylis-plugin-rtl": "^2.1.1",
     "uuid": "^11.1.0",
